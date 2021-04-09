@@ -1,0 +1,395 @@
+<?php
+
+namespace PHPMaker2021\umkm_sidakui;
+
+// Page object
+$KumkmMarketEdit = &$Page;
+?>
+<script>
+var currentForm, currentPageID;
+var fkumkm_marketedit;
+loadjs.ready("head", function () {
+    var $ = jQuery;
+    // Form object
+    currentPageID = ew.PAGE_ID = "edit";
+    fkumkm_marketedit = currentForm = new ew.Form("fkumkm_marketedit", "edit");
+
+    // Add fields
+    var currentTable = <?= JsonEncode(GetClientVar("tables", "kumkm_market")) ?>,
+        fields = currentTable.fields;
+    if (!ew.vars.tables.kumkm_market)
+        ew.vars.tables.kumkm_market = currentTable;
+    fkumkm_marketedit.addFields([
+        ["id", [fields.id.visible && fields.id.required ? ew.Validators.required(fields.id.caption) : null], fields.id.isInvalid],
+        ["produk_foto", [fields.produk_foto.visible && fields.produk_foto.required ? ew.Validators.fileRequired(fields.produk_foto.caption) : null], fields.produk_foto.isInvalid],
+        ["produk_nama", [fields.produk_nama.visible && fields.produk_nama.required ? ew.Validators.required(fields.produk_nama.caption) : null], fields.produk_nama.isInvalid],
+        ["produk_jenis", [fields.produk_jenis.visible && fields.produk_jenis.required ? ew.Validators.required(fields.produk_jenis.caption) : null], fields.produk_jenis.isInvalid],
+        ["produk_desc", [fields.produk_desc.visible && fields.produk_desc.required ? ew.Validators.required(fields.produk_desc.caption) : null], fields.produk_desc.isInvalid],
+        ["produk_harga", [fields.produk_harga.visible && fields.produk_harga.required ? ew.Validators.required(fields.produk_harga.caption) : null, ew.Validators.float], fields.produk_harga.isInvalid],
+        ["kurator", [fields.kurator.visible && fields.kurator.required ? ew.Validators.required(fields.kurator.caption) : null], fields.kurator.isInvalid],
+        ["produk_berat", [fields.produk_berat.visible && fields.produk_berat.required ? ew.Validators.required(fields.produk_berat.caption) : null, ew.Validators.float], fields.produk_berat.isInvalid],
+        ["produk_panjang", [fields.produk_panjang.visible && fields.produk_panjang.required ? ew.Validators.required(fields.produk_panjang.caption) : null, ew.Validators.float], fields.produk_panjang.isInvalid],
+        ["produk_lebar", [fields.produk_lebar.visible && fields.produk_lebar.required ? ew.Validators.required(fields.produk_lebar.caption) : null, ew.Validators.float], fields.produk_lebar.isInvalid],
+        ["produk_tinggi", [fields.produk_tinggi.visible && fields.produk_tinggi.required ? ew.Validators.required(fields.produk_tinggi.caption) : null, ew.Validators.float], fields.produk_tinggi.isInvalid],
+        ["produk_harga_dasar", [fields.produk_harga_dasar.visible && fields.produk_harga_dasar.required ? ew.Validators.required(fields.produk_harga_dasar.caption) : null, ew.Validators.float], fields.produk_harga_dasar.isInvalid],
+        ["produk_foto_1", [fields.produk_foto_1.visible && fields.produk_foto_1.required ? ew.Validators.fileRequired(fields.produk_foto_1.caption) : null], fields.produk_foto_1.isInvalid],
+        ["produk_foto_2", [fields.produk_foto_2.visible && fields.produk_foto_2.required ? ew.Validators.fileRequired(fields.produk_foto_2.caption) : null], fields.produk_foto_2.isInvalid],
+        ["produk_foto_3", [fields.produk_foto_3.visible && fields.produk_foto_3.required ? ew.Validators.fileRequired(fields.produk_foto_3.caption) : null], fields.produk_foto_3.isInvalid],
+        ["market", [fields.market.visible && fields.market.required ? ew.Validators.required(fields.market.caption) : null], fields.market.isInvalid]
+    ]);
+
+    // Set invalid fields
+    $(function() {
+        var f = fkumkm_marketedit,
+            fobj = f.getForm(),
+            $fobj = $(fobj),
+            $k = $fobj.find("#" + f.formKeyCountName), // Get key_count
+            rowcnt = ($k[0]) ? parseInt($k.val(), 10) : 1,
+            startcnt = (rowcnt == 0) ? 0 : 1; // Check rowcnt == 0 => Inline-Add
+        for (var i = startcnt; i <= rowcnt; i++) {
+            var rowIndex = ($k[0]) ? String(i) : "";
+            f.setInvalid(rowIndex);
+        }
+    });
+
+    // Validate form
+    fkumkm_marketedit.validate = function () {
+        if (!this.validateRequired)
+            return true; // Ignore validation
+        var fobj = this.getForm(),
+            $fobj = $(fobj);
+        if ($fobj.find("#confirm").val() == "confirm")
+            return true;
+        var addcnt = 0,
+            $k = $fobj.find("#" + this.formKeyCountName), // Get key_count
+            rowcnt = ($k[0]) ? parseInt($k.val(), 10) : 1,
+            startcnt = (rowcnt == 0) ? 0 : 1, // Check rowcnt == 0 => Inline-Add
+            gridinsert = ["insert", "gridinsert"].includes($fobj.find("#action").val()) && $k[0];
+        for (var i = startcnt; i <= rowcnt; i++) {
+            var rowIndex = ($k[0]) ? String(i) : "";
+            $fobj.data("rowindex", rowIndex);
+
+            // Validate fields
+            if (!this.validateFields(rowIndex))
+                return false;
+
+            // Call Form_CustomValidate event
+            if (!this.customValidate(fobj)) {
+                this.focus();
+                return false;
+            }
+        }
+
+        // Process detail forms
+        var dfs = $fobj.find("input[name='detailpage']").get();
+        for (var i = 0; i < dfs.length; i++) {
+            var df = dfs[i],
+                val = df.value,
+                frm = ew.forms.get(val);
+            if (val && frm && !frm.validate())
+                return false;
+        }
+        return true;
+    }
+
+    // Form_CustomValidate
+    fkumkm_marketedit.customValidate = function(fobj) { // DO NOT CHANGE THIS LINE!
+        // Your custom validation code here, return false if invalid.
+        return true;
+    }
+
+    // Use JavaScript validation or not
+    fkumkm_marketedit.validateRequired = <?= Config("CLIENT_VALIDATE") ? "true" : "false" ?>;
+
+    // Dynamic selection lists
+    loadjs.done("fkumkm_marketedit");
+});
+</script>
+<script>
+loadjs.ready("head", function () {
+    // Write your table-specific client script here, no need to add script tags.
+});
+</script>
+<?php $Page->showPageHeader(); ?>
+<?php
+$Page->showMessage();
+?>
+<form name="fkumkm_marketedit" id="fkumkm_marketedit" class="<?= $Page->FormClassName ?>" action="<?= CurrentPageUrl(false) ?>" method="post">
+<?php if (Config("CHECK_TOKEN")) { ?>
+<input type="hidden" name="<?= $TokenNameKey ?>" value="<?= $TokenName ?>"><!-- CSRF token name -->
+<input type="hidden" name="<?= $TokenValueKey ?>" value="<?= $TokenValue ?>"><!-- CSRF token value -->
+<?php } ?>
+<input type="hidden" name="t" value="kumkm_market">
+<input type="hidden" name="action" id="action" value="update">
+<input type="hidden" name="modal" value="<?= (int)$Page->IsModal ?>">
+<input type="hidden" name="<?= $Page->OldKeyName ?>" value="<?= $Page->OldKey ?>">
+<div class="ew-edit-div"><!-- page* -->
+<?php if ($Page->id->Visible) { // id ?>
+    <div id="r_id" class="form-group row">
+        <label id="elh_kumkm_market_id" class="<?= $Page->LeftColumnClass ?>"><?= $Page->id->caption() ?><?= $Page->id->Required ? $Language->phrase("FieldRequiredIndicator") : "" ?></label>
+        <div class="<?= $Page->RightColumnClass ?>"><div <?= $Page->id->cellAttributes() ?>>
+<span id="el_kumkm_market_id">
+<span<?= $Page->id->viewAttributes() ?>>
+<input type="text" readonly class="form-control-plaintext" value="<?= HtmlEncode(RemoveHtml($Page->id->getDisplayValue($Page->id->EditValue))) ?>"></span>
+</span>
+<input type="hidden" data-table="kumkm_market" data-field="x_id" data-hidden="1" name="x_id" id="x_id" value="<?= HtmlEncode($Page->id->CurrentValue) ?>">
+</div></div>
+    </div>
+<?php } ?>
+<?php if ($Page->produk_foto->Visible) { // produk_foto ?>
+    <div id="r_produk_foto" class="form-group row">
+        <label id="elh_kumkm_market_produk_foto" class="<?= $Page->LeftColumnClass ?>"><?= $Page->produk_foto->caption() ?><?= $Page->produk_foto->Required ? $Language->phrase("FieldRequiredIndicator") : "" ?></label>
+        <div class="<?= $Page->RightColumnClass ?>"><div <?= $Page->produk_foto->cellAttributes() ?>>
+<span id="el_kumkm_market_produk_foto">
+<div id="fd_x_produk_foto">
+<div class="input-group">
+    <div class="custom-file">
+        <input type="file" class="custom-file-input" title="<?= $Page->produk_foto->title() ?>" data-table="kumkm_market" data-field="x_produk_foto" name="x_produk_foto" id="x_produk_foto" lang="<?= CurrentLanguageID() ?>"<?= $Page->produk_foto->editAttributes() ?><?= ($Page->produk_foto->ReadOnly || $Page->produk_foto->Disabled) ? " disabled" : "" ?> aria-describedby="x_produk_foto_help">
+        <label class="custom-file-label ew-file-label" for="x_produk_foto"><?= $Language->phrase("ChooseFile") ?></label>
+    </div>
+</div>
+<?= $Page->produk_foto->getCustomMessage() ?>
+<div class="invalid-feedback"><?= $Page->produk_foto->getErrorMessage() ?></div>
+<input type="hidden" name="fn_x_produk_foto" id= "fn_x_produk_foto" value="<?= $Page->produk_foto->Upload->FileName ?>">
+<input type="hidden" name="fa_x_produk_foto" id= "fa_x_produk_foto" value="<?= (Post("fa_x_produk_foto") == "0") ? "0" : "1" ?>">
+<input type="hidden" name="fs_x_produk_foto" id= "fs_x_produk_foto" value="50">
+<input type="hidden" name="fx_x_produk_foto" id= "fx_x_produk_foto" value="<?= $Page->produk_foto->UploadAllowedFileExt ?>">
+<input type="hidden" name="fm_x_produk_foto" id= "fm_x_produk_foto" value="<?= $Page->produk_foto->UploadMaxFileSize ?>">
+</div>
+<table id="ft_x_produk_foto" class="table table-sm float-left ew-upload-table"><tbody class="files"></tbody></table>
+</span>
+</div></div>
+    </div>
+<?php } ?>
+<?php if ($Page->produk_nama->Visible) { // produk_nama ?>
+    <div id="r_produk_nama" class="form-group row">
+        <label id="elh_kumkm_market_produk_nama" for="x_produk_nama" class="<?= $Page->LeftColumnClass ?>"><?= $Page->produk_nama->caption() ?><?= $Page->produk_nama->Required ? $Language->phrase("FieldRequiredIndicator") : "" ?></label>
+        <div class="<?= $Page->RightColumnClass ?>"><div <?= $Page->produk_nama->cellAttributes() ?>>
+<span id="el_kumkm_market_produk_nama">
+<input type="<?= $Page->produk_nama->getInputTextType() ?>" data-table="kumkm_market" data-field="x_produk_nama" name="x_produk_nama" id="x_produk_nama" size="30" maxlength="50" placeholder="<?= HtmlEncode($Page->produk_nama->getPlaceHolder()) ?>" value="<?= $Page->produk_nama->EditValue ?>"<?= $Page->produk_nama->editAttributes() ?> aria-describedby="x_produk_nama_help">
+<?= $Page->produk_nama->getCustomMessage() ?>
+<div class="invalid-feedback"><?= $Page->produk_nama->getErrorMessage() ?></div>
+</span>
+</div></div>
+    </div>
+<?php } ?>
+<?php if ($Page->produk_jenis->Visible) { // produk_jenis ?>
+    <div id="r_produk_jenis" class="form-group row">
+        <label id="elh_kumkm_market_produk_jenis" for="x_produk_jenis" class="<?= $Page->LeftColumnClass ?>"><?= $Page->produk_jenis->caption() ?><?= $Page->produk_jenis->Required ? $Language->phrase("FieldRequiredIndicator") : "" ?></label>
+        <div class="<?= $Page->RightColumnClass ?>"><div <?= $Page->produk_jenis->cellAttributes() ?>>
+<span id="el_kumkm_market_produk_jenis">
+<input type="<?= $Page->produk_jenis->getInputTextType() ?>" data-table="kumkm_market" data-field="x_produk_jenis" name="x_produk_jenis" id="x_produk_jenis" size="30" maxlength="50" placeholder="<?= HtmlEncode($Page->produk_jenis->getPlaceHolder()) ?>" value="<?= $Page->produk_jenis->EditValue ?>"<?= $Page->produk_jenis->editAttributes() ?> aria-describedby="x_produk_jenis_help">
+<?= $Page->produk_jenis->getCustomMessage() ?>
+<div class="invalid-feedback"><?= $Page->produk_jenis->getErrorMessage() ?></div>
+</span>
+</div></div>
+    </div>
+<?php } ?>
+<?php if ($Page->produk_desc->Visible) { // produk_desc ?>
+    <div id="r_produk_desc" class="form-group row">
+        <label id="elh_kumkm_market_produk_desc" for="x_produk_desc" class="<?= $Page->LeftColumnClass ?>"><?= $Page->produk_desc->caption() ?><?= $Page->produk_desc->Required ? $Language->phrase("FieldRequiredIndicator") : "" ?></label>
+        <div class="<?= $Page->RightColumnClass ?>"><div <?= $Page->produk_desc->cellAttributes() ?>>
+<span id="el_kumkm_market_produk_desc">
+<textarea data-table="kumkm_market" data-field="x_produk_desc" name="x_produk_desc" id="x_produk_desc" cols="35" rows="4" placeholder="<?= HtmlEncode($Page->produk_desc->getPlaceHolder()) ?>"<?= $Page->produk_desc->editAttributes() ?> aria-describedby="x_produk_desc_help"><?= $Page->produk_desc->EditValue ?></textarea>
+<?= $Page->produk_desc->getCustomMessage() ?>
+<div class="invalid-feedback"><?= $Page->produk_desc->getErrorMessage() ?></div>
+</span>
+</div></div>
+    </div>
+<?php } ?>
+<?php if ($Page->produk_harga->Visible) { // produk_harga ?>
+    <div id="r_produk_harga" class="form-group row">
+        <label id="elh_kumkm_market_produk_harga" for="x_produk_harga" class="<?= $Page->LeftColumnClass ?>"><?= $Page->produk_harga->caption() ?><?= $Page->produk_harga->Required ? $Language->phrase("FieldRequiredIndicator") : "" ?></label>
+        <div class="<?= $Page->RightColumnClass ?>"><div <?= $Page->produk_harga->cellAttributes() ?>>
+<span id="el_kumkm_market_produk_harga">
+<input type="<?= $Page->produk_harga->getInputTextType() ?>" data-table="kumkm_market" data-field="x_produk_harga" name="x_produk_harga" id="x_produk_harga" size="30" maxlength="22" placeholder="<?= HtmlEncode($Page->produk_harga->getPlaceHolder()) ?>" value="<?= $Page->produk_harga->EditValue ?>"<?= $Page->produk_harga->editAttributes() ?> aria-describedby="x_produk_harga_help">
+<?= $Page->produk_harga->getCustomMessage() ?>
+<div class="invalid-feedback"><?= $Page->produk_harga->getErrorMessage() ?></div>
+</span>
+</div></div>
+    </div>
+<?php } ?>
+<?php if ($Page->kurator->Visible) { // kurator ?>
+    <div id="r_kurator" class="form-group row">
+        <label id="elh_kumkm_market_kurator" for="x_kurator" class="<?= $Page->LeftColumnClass ?>"><?= $Page->kurator->caption() ?><?= $Page->kurator->Required ? $Language->phrase("FieldRequiredIndicator") : "" ?></label>
+        <div class="<?= $Page->RightColumnClass ?>"><div <?= $Page->kurator->cellAttributes() ?>>
+<span id="el_kumkm_market_kurator">
+<input type="<?= $Page->kurator->getInputTextType() ?>" data-table="kumkm_market" data-field="x_kurator" name="x_kurator" id="x_kurator" size="30" maxlength="50" placeholder="<?= HtmlEncode($Page->kurator->getPlaceHolder()) ?>" value="<?= $Page->kurator->EditValue ?>"<?= $Page->kurator->editAttributes() ?> aria-describedby="x_kurator_help">
+<?= $Page->kurator->getCustomMessage() ?>
+<div class="invalid-feedback"><?= $Page->kurator->getErrorMessage() ?></div>
+</span>
+</div></div>
+    </div>
+<?php } ?>
+<?php if ($Page->produk_berat->Visible) { // produk_berat ?>
+    <div id="r_produk_berat" class="form-group row">
+        <label id="elh_kumkm_market_produk_berat" for="x_produk_berat" class="<?= $Page->LeftColumnClass ?>"><?= $Page->produk_berat->caption() ?><?= $Page->produk_berat->Required ? $Language->phrase("FieldRequiredIndicator") : "" ?></label>
+        <div class="<?= $Page->RightColumnClass ?>"><div <?= $Page->produk_berat->cellAttributes() ?>>
+<span id="el_kumkm_market_produk_berat">
+<input type="<?= $Page->produk_berat->getInputTextType() ?>" data-table="kumkm_market" data-field="x_produk_berat" name="x_produk_berat" id="x_produk_berat" size="30" maxlength="12" placeholder="<?= HtmlEncode($Page->produk_berat->getPlaceHolder()) ?>" value="<?= $Page->produk_berat->EditValue ?>"<?= $Page->produk_berat->editAttributes() ?> aria-describedby="x_produk_berat_help">
+<?= $Page->produk_berat->getCustomMessage() ?>
+<div class="invalid-feedback"><?= $Page->produk_berat->getErrorMessage() ?></div>
+</span>
+</div></div>
+    </div>
+<?php } ?>
+<?php if ($Page->produk_panjang->Visible) { // produk_panjang ?>
+    <div id="r_produk_panjang" class="form-group row">
+        <label id="elh_kumkm_market_produk_panjang" for="x_produk_panjang" class="<?= $Page->LeftColumnClass ?>"><?= $Page->produk_panjang->caption() ?><?= $Page->produk_panjang->Required ? $Language->phrase("FieldRequiredIndicator") : "" ?></label>
+        <div class="<?= $Page->RightColumnClass ?>"><div <?= $Page->produk_panjang->cellAttributes() ?>>
+<span id="el_kumkm_market_produk_panjang">
+<input type="<?= $Page->produk_panjang->getInputTextType() ?>" data-table="kumkm_market" data-field="x_produk_panjang" name="x_produk_panjang" id="x_produk_panjang" size="30" maxlength="12" placeholder="<?= HtmlEncode($Page->produk_panjang->getPlaceHolder()) ?>" value="<?= $Page->produk_panjang->EditValue ?>"<?= $Page->produk_panjang->editAttributes() ?> aria-describedby="x_produk_panjang_help">
+<?= $Page->produk_panjang->getCustomMessage() ?>
+<div class="invalid-feedback"><?= $Page->produk_panjang->getErrorMessage() ?></div>
+</span>
+</div></div>
+    </div>
+<?php } ?>
+<?php if ($Page->produk_lebar->Visible) { // produk_lebar ?>
+    <div id="r_produk_lebar" class="form-group row">
+        <label id="elh_kumkm_market_produk_lebar" for="x_produk_lebar" class="<?= $Page->LeftColumnClass ?>"><?= $Page->produk_lebar->caption() ?><?= $Page->produk_lebar->Required ? $Language->phrase("FieldRequiredIndicator") : "" ?></label>
+        <div class="<?= $Page->RightColumnClass ?>"><div <?= $Page->produk_lebar->cellAttributes() ?>>
+<span id="el_kumkm_market_produk_lebar">
+<input type="<?= $Page->produk_lebar->getInputTextType() ?>" data-table="kumkm_market" data-field="x_produk_lebar" name="x_produk_lebar" id="x_produk_lebar" size="30" maxlength="12" placeholder="<?= HtmlEncode($Page->produk_lebar->getPlaceHolder()) ?>" value="<?= $Page->produk_lebar->EditValue ?>"<?= $Page->produk_lebar->editAttributes() ?> aria-describedby="x_produk_lebar_help">
+<?= $Page->produk_lebar->getCustomMessage() ?>
+<div class="invalid-feedback"><?= $Page->produk_lebar->getErrorMessage() ?></div>
+</span>
+</div></div>
+    </div>
+<?php } ?>
+<?php if ($Page->produk_tinggi->Visible) { // produk_tinggi ?>
+    <div id="r_produk_tinggi" class="form-group row">
+        <label id="elh_kumkm_market_produk_tinggi" for="x_produk_tinggi" class="<?= $Page->LeftColumnClass ?>"><?= $Page->produk_tinggi->caption() ?><?= $Page->produk_tinggi->Required ? $Language->phrase("FieldRequiredIndicator") : "" ?></label>
+        <div class="<?= $Page->RightColumnClass ?>"><div <?= $Page->produk_tinggi->cellAttributes() ?>>
+<span id="el_kumkm_market_produk_tinggi">
+<input type="<?= $Page->produk_tinggi->getInputTextType() ?>" data-table="kumkm_market" data-field="x_produk_tinggi" name="x_produk_tinggi" id="x_produk_tinggi" size="30" maxlength="12" placeholder="<?= HtmlEncode($Page->produk_tinggi->getPlaceHolder()) ?>" value="<?= $Page->produk_tinggi->EditValue ?>"<?= $Page->produk_tinggi->editAttributes() ?> aria-describedby="x_produk_tinggi_help">
+<?= $Page->produk_tinggi->getCustomMessage() ?>
+<div class="invalid-feedback"><?= $Page->produk_tinggi->getErrorMessage() ?></div>
+</span>
+</div></div>
+    </div>
+<?php } ?>
+<?php if ($Page->produk_harga_dasar->Visible) { // produk_harga_dasar ?>
+    <div id="r_produk_harga_dasar" class="form-group row">
+        <label id="elh_kumkm_market_produk_harga_dasar" for="x_produk_harga_dasar" class="<?= $Page->LeftColumnClass ?>"><?= $Page->produk_harga_dasar->caption() ?><?= $Page->produk_harga_dasar->Required ? $Language->phrase("FieldRequiredIndicator") : "" ?></label>
+        <div class="<?= $Page->RightColumnClass ?>"><div <?= $Page->produk_harga_dasar->cellAttributes() ?>>
+<span id="el_kumkm_market_produk_harga_dasar">
+<input type="<?= $Page->produk_harga_dasar->getInputTextType() ?>" data-table="kumkm_market" data-field="x_produk_harga_dasar" name="x_produk_harga_dasar" id="x_produk_harga_dasar" size="30" maxlength="22" placeholder="<?= HtmlEncode($Page->produk_harga_dasar->getPlaceHolder()) ?>" value="<?= $Page->produk_harga_dasar->EditValue ?>"<?= $Page->produk_harga_dasar->editAttributes() ?> aria-describedby="x_produk_harga_dasar_help">
+<?= $Page->produk_harga_dasar->getCustomMessage() ?>
+<div class="invalid-feedback"><?= $Page->produk_harga_dasar->getErrorMessage() ?></div>
+</span>
+</div></div>
+    </div>
+<?php } ?>
+<?php if ($Page->produk_foto_1->Visible) { // produk_foto_1 ?>
+    <div id="r_produk_foto_1" class="form-group row">
+        <label id="elh_kumkm_market_produk_foto_1" class="<?= $Page->LeftColumnClass ?>"><?= $Page->produk_foto_1->caption() ?><?= $Page->produk_foto_1->Required ? $Language->phrase("FieldRequiredIndicator") : "" ?></label>
+        <div class="<?= $Page->RightColumnClass ?>"><div <?= $Page->produk_foto_1->cellAttributes() ?>>
+<span id="el_kumkm_market_produk_foto_1">
+<div id="fd_x_produk_foto_1">
+<div class="input-group">
+    <div class="custom-file">
+        <input type="file" class="custom-file-input" title="<?= $Page->produk_foto_1->title() ?>" data-table="kumkm_market" data-field="x_produk_foto_1" name="x_produk_foto_1" id="x_produk_foto_1" lang="<?= CurrentLanguageID() ?>"<?= $Page->produk_foto_1->editAttributes() ?><?= ($Page->produk_foto_1->ReadOnly || $Page->produk_foto_1->Disabled) ? " disabled" : "" ?> aria-describedby="x_produk_foto_1_help">
+        <label class="custom-file-label ew-file-label" for="x_produk_foto_1"><?= $Language->phrase("ChooseFile") ?></label>
+    </div>
+</div>
+<?= $Page->produk_foto_1->getCustomMessage() ?>
+<div class="invalid-feedback"><?= $Page->produk_foto_1->getErrorMessage() ?></div>
+<input type="hidden" name="fn_x_produk_foto_1" id= "fn_x_produk_foto_1" value="<?= $Page->produk_foto_1->Upload->FileName ?>">
+<input type="hidden" name="fa_x_produk_foto_1" id= "fa_x_produk_foto_1" value="<?= (Post("fa_x_produk_foto_1") == "0") ? "0" : "1" ?>">
+<input type="hidden" name="fs_x_produk_foto_1" id= "fs_x_produk_foto_1" value="50">
+<input type="hidden" name="fx_x_produk_foto_1" id= "fx_x_produk_foto_1" value="<?= $Page->produk_foto_1->UploadAllowedFileExt ?>">
+<input type="hidden" name="fm_x_produk_foto_1" id= "fm_x_produk_foto_1" value="<?= $Page->produk_foto_1->UploadMaxFileSize ?>">
+</div>
+<table id="ft_x_produk_foto_1" class="table table-sm float-left ew-upload-table"><tbody class="files"></tbody></table>
+</span>
+</div></div>
+    </div>
+<?php } ?>
+<?php if ($Page->produk_foto_2->Visible) { // produk_foto_2 ?>
+    <div id="r_produk_foto_2" class="form-group row">
+        <label id="elh_kumkm_market_produk_foto_2" class="<?= $Page->LeftColumnClass ?>"><?= $Page->produk_foto_2->caption() ?><?= $Page->produk_foto_2->Required ? $Language->phrase("FieldRequiredIndicator") : "" ?></label>
+        <div class="<?= $Page->RightColumnClass ?>"><div <?= $Page->produk_foto_2->cellAttributes() ?>>
+<span id="el_kumkm_market_produk_foto_2">
+<div id="fd_x_produk_foto_2">
+<div class="input-group">
+    <div class="custom-file">
+        <input type="file" class="custom-file-input" title="<?= $Page->produk_foto_2->title() ?>" data-table="kumkm_market" data-field="x_produk_foto_2" name="x_produk_foto_2" id="x_produk_foto_2" lang="<?= CurrentLanguageID() ?>"<?= $Page->produk_foto_2->editAttributes() ?><?= ($Page->produk_foto_2->ReadOnly || $Page->produk_foto_2->Disabled) ? " disabled" : "" ?> aria-describedby="x_produk_foto_2_help">
+        <label class="custom-file-label ew-file-label" for="x_produk_foto_2"><?= $Language->phrase("ChooseFile") ?></label>
+    </div>
+</div>
+<?= $Page->produk_foto_2->getCustomMessage() ?>
+<div class="invalid-feedback"><?= $Page->produk_foto_2->getErrorMessage() ?></div>
+<input type="hidden" name="fn_x_produk_foto_2" id= "fn_x_produk_foto_2" value="<?= $Page->produk_foto_2->Upload->FileName ?>">
+<input type="hidden" name="fa_x_produk_foto_2" id= "fa_x_produk_foto_2" value="<?= (Post("fa_x_produk_foto_2") == "0") ? "0" : "1" ?>">
+<input type="hidden" name="fs_x_produk_foto_2" id= "fs_x_produk_foto_2" value="50">
+<input type="hidden" name="fx_x_produk_foto_2" id= "fx_x_produk_foto_2" value="<?= $Page->produk_foto_2->UploadAllowedFileExt ?>">
+<input type="hidden" name="fm_x_produk_foto_2" id= "fm_x_produk_foto_2" value="<?= $Page->produk_foto_2->UploadMaxFileSize ?>">
+</div>
+<table id="ft_x_produk_foto_2" class="table table-sm float-left ew-upload-table"><tbody class="files"></tbody></table>
+</span>
+</div></div>
+    </div>
+<?php } ?>
+<?php if ($Page->produk_foto_3->Visible) { // produk_foto_3 ?>
+    <div id="r_produk_foto_3" class="form-group row">
+        <label id="elh_kumkm_market_produk_foto_3" class="<?= $Page->LeftColumnClass ?>"><?= $Page->produk_foto_3->caption() ?><?= $Page->produk_foto_3->Required ? $Language->phrase("FieldRequiredIndicator") : "" ?></label>
+        <div class="<?= $Page->RightColumnClass ?>"><div <?= $Page->produk_foto_3->cellAttributes() ?>>
+<span id="el_kumkm_market_produk_foto_3">
+<div id="fd_x_produk_foto_3">
+<div class="input-group">
+    <div class="custom-file">
+        <input type="file" class="custom-file-input" title="<?= $Page->produk_foto_3->title() ?>" data-table="kumkm_market" data-field="x_produk_foto_3" name="x_produk_foto_3" id="x_produk_foto_3" lang="<?= CurrentLanguageID() ?>"<?= $Page->produk_foto_3->editAttributes() ?><?= ($Page->produk_foto_3->ReadOnly || $Page->produk_foto_3->Disabled) ? " disabled" : "" ?> aria-describedby="x_produk_foto_3_help">
+        <label class="custom-file-label ew-file-label" for="x_produk_foto_3"><?= $Language->phrase("ChooseFile") ?></label>
+    </div>
+</div>
+<?= $Page->produk_foto_3->getCustomMessage() ?>
+<div class="invalid-feedback"><?= $Page->produk_foto_3->getErrorMessage() ?></div>
+<input type="hidden" name="fn_x_produk_foto_3" id= "fn_x_produk_foto_3" value="<?= $Page->produk_foto_3->Upload->FileName ?>">
+<input type="hidden" name="fa_x_produk_foto_3" id= "fa_x_produk_foto_3" value="<?= (Post("fa_x_produk_foto_3") == "0") ? "0" : "1" ?>">
+<input type="hidden" name="fs_x_produk_foto_3" id= "fs_x_produk_foto_3" value="50">
+<input type="hidden" name="fx_x_produk_foto_3" id= "fx_x_produk_foto_3" value="<?= $Page->produk_foto_3->UploadAllowedFileExt ?>">
+<input type="hidden" name="fm_x_produk_foto_3" id= "fm_x_produk_foto_3" value="<?= $Page->produk_foto_3->UploadMaxFileSize ?>">
+</div>
+<table id="ft_x_produk_foto_3" class="table table-sm float-left ew-upload-table"><tbody class="files"></tbody></table>
+</span>
+</div></div>
+    </div>
+<?php } ?>
+<?php if ($Page->market->Visible) { // market ?>
+    <div id="r_market" class="form-group row">
+        <label id="elh_kumkm_market_market" for="x_market" class="<?= $Page->LeftColumnClass ?>"><?= $Page->market->caption() ?><?= $Page->market->Required ? $Language->phrase("FieldRequiredIndicator") : "" ?></label>
+        <div class="<?= $Page->RightColumnClass ?>"><div <?= $Page->market->cellAttributes() ?>>
+<span id="el_kumkm_market_market">
+<input type="<?= $Page->market->getInputTextType() ?>" data-table="kumkm_market" data-field="x_market" name="x_market" id="x_market" size="30" maxlength="20" placeholder="<?= HtmlEncode($Page->market->getPlaceHolder()) ?>" value="<?= $Page->market->EditValue ?>"<?= $Page->market->editAttributes() ?> aria-describedby="x_market_help">
+<?= $Page->market->getCustomMessage() ?>
+<div class="invalid-feedback"><?= $Page->market->getErrorMessage() ?></div>
+</span>
+</div></div>
+    </div>
+<?php } ?>
+</div><!-- /page* -->
+<?php if (!$Page->IsModal) { ?>
+<div class="form-group row"><!-- buttons .form-group -->
+    <div class="<?= $Page->OffsetColumnClass ?>"><!-- buttons offset -->
+<button class="btn btn-primary ew-btn" name="btn-action" id="btn-action" type="submit"><?= $Language->phrase("SaveBtn") ?></button>
+<button class="btn btn-default ew-btn" name="btn-cancel" id="btn-cancel" type="button" data-href="<?= HtmlEncode(GetUrl($Page->getReturnUrl())) ?>"><?= $Language->phrase("CancelBtn") ?></button>
+    </div><!-- /buttons offset -->
+</div><!-- /buttons .form-group -->
+<?php } ?>
+</form>
+<?php
+$Page->showPageFooter();
+echo GetDebugMessage();
+?>
+<script>
+// Field event handlers
+loadjs.ready("head", function() {
+    ew.addEventHandlers("kumkm_market");
+});
+</script>
+<script>
+loadjs.ready("load", function () {
+    // Write your table-specific startup script here, no need to add script tags.
+});
+</script>
